@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSV File Upload and Processing</title>
+    <style>
+        /* General Page Styling */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Center the title at the top of the page */
+        h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-top: 40px;
+        }
+
+        /* Main container holding the file upload and output sections */
+        .container, .select-container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            margin-top: 40px;
+            position: relative;
+        }
+
+        /* Two inner containers: one for the file upload and submit button, 
+           one for the output display */
+        .upload-container, .output-container {
+            margin-bottom: 20px;
+        }
+
+        /* Styling for the file upload section */
+        .upload-container {
+            text-align: center;
+        }
+
+        #file-upload {
+            margin-bottom: 10px;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #submit-button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #submit-button:hover {
+            background-color: #45a049;
+        }
+
+        /* Styling for the output section */
+        .output-container {
+            text-align: center;
+            display: none;
+            background-color: #f4f4f4;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #error-message {
+            color: red;
+            display: none;
+            text-align: center;
+        }
+
+        #output h4 {
+            font-size: 1rem;
+            font-weight: normal;
+        }
+
+        /* Position the 'Next' button at the bottom right */
+        #next-button {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #next-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Container for the select field */
+        .select-container {
+            display: none; /* Hidden by default */
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>CSV File Upload and Processing</h2>
+
+    <div class="container">
+        <!-- File upload and submit button section -->
+        <div class="upload-container">
+            <input type="file" id="file-upload" accept=".csv" />
+            <button id="submit-button" onclick="uploadFile()">Submit File</button>
+        </div>
+
+        <!-- Output section -->
+        <div class="output-container" id="output">
+            <h4>Total Rows Retrieved from the above Data-Set: <span id="total-rows"></span></h4>
+        </div>
+
+        <!-- Error message section -->
+        <div id="error-message">
+            <h4>Error: <span id="error-text"></span></h4>
+        </div>
+    </div>
+
+    <!-- Select field container (initially hidden) -->
+    <div class="select-container" id="select-container">
+        <label for="optionSelect">What do you want to do with the above Data-Set?</label>
+        <select id="optionSelect">
+            <option value="" selected>Select Operation</option>
+            <option value="data-analytics">Data Analytics</option>
+            <option value="data-visualization">Data Visualization</option>
+        </select>
+    </div>
+
+    <!-- Next Button -->
+    <button id="next-button" onclick="navigateToPage()">Next</button>
+
+    <script>
+        // Function to upload the file to the server and get the processed result
+        function uploadFile() {
+            const fileInput = document.getElementById('file-upload');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a CSV file first!');
+                return;
+            }
+
+            // Check if the file is CSV
+            if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
+                alert('Please upload a valid CSV file!');
+                return;
+            }
+
+            // Disable submit button to prevent multiple submissions
+            document.getElementById('submit-button').disabled = true;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Send the file to the server via AJAX
+            fetch('/process-csv', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.processed_output) {
+                    // Display the total number of rows
+                    document.getElementById('output').style.display = 'block';
+                    document.getElementById('total-rows').textContent = data.processed_output;
+                    document.getElementById('error-message').style.display = 'none'; // Hide error message if success
+
+                    // Show the select field container after file processing
+                    document.getElementById('select-container').style.display = 'block';
+                } else {
+                    // Display error message if response does not contain processed output
+                    displayError(data.error || "An error occurred");
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                displayError("An unexpected error occurred");
+            })
+            .finally(() => {
+                // Re-enable the button after the process completes
+                document.getElementById('submit-button').disabled = false;
+            });
+        }
+
+        // Function to display error messages
+        function displayError(message) {
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('error-text').textContent = message;
+            document.getElementById('output').style.display = 'none'; // Hide output section if there's an error
+        }
+
+        // Function to navigate to the appropriate page based on the selected option
+        function navigateToPage() {
+            const selectedOption = document.getElementById('optionSelect').value;
+
+            if (selectedOption === 'data-analytics') {
+                // Navigate to the Data Analytics page
+                window.location.href = '/data-analytics.html';
+            } else if (selectedOption === 'data-visualization') {
+                // Navigate to the Data Visualization page
+                window.location.href = '/data-visualization.html';
+            } else {
+                // If no valid option is selected, alert the user
+                alert('Please select an operation before proceeding.');
+            }
+        }
+    </script>
+</body>
+</html>

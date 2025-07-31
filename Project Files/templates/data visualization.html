@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.4.1/html2canvas.min.js"></script>
+    <title>Data Visualization</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body Styling */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 20px;
+            padding: 20px;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        h1 {
+            font-size: 2em;
+            color: #4CAF50;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* Form Styling */
+        form {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        select,
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        select:focus,
+        input[type="number"]:focus {
+            border-color: #4CAF50;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Error Message Styling */
+        .error-message {
+            color: red;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        /* Hidden by default */
+        #x-axis-field,
+        #y-axis-field {
+            display: none;
+        }
+
+        /* Output Section Styling */
+        #output {
+            background-color: #e9f7e3;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #d1e7d1;
+            font-size: 1.1rem;
+            margin-top: 20px;
+            word-wrap: break-word;
+        }
+
+        #output img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+            align-items: center;
+        }
+
+        /* Centering Buttons */
+        .center-button {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        /* Button to Download Output */
+        #download-button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+        }
+
+        #download-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Back Button Styling */
+        #back-button {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+        #back-button:hover {
+            background-color: #d32f2f;
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            form {
+                padding: 15px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Data Visualization</h1>
+
+    <!-- Error Message Display -->
+    {% if error_message %}
+        <div class="error-message">
+            {{ error_message }}
+        </div>
+    {% endif %}
+
+    <form method="POST">
+        <div>
+            <label for="visualizations">Select Visualization:</label>
+            <select id="visualizations" name="visualizations" onchange="updateFormFields()">
+                <option value="" selected>Select Operation</option>
+                <option value="bar_chart">Bar Chart</option>
+                <option value="line_chart">Line Chart</option>
+                <option value="histogram">Histogram</option>
+                <option value="area_chart">Area Chart</option>
+                <option value="pie_chart">Pie Chart</option>
+                <option value="scatter_plot">Scatter Plot</option>
+                <option value="box_plot">Box Plot</option>
+            </select>
+        </div>
+
+        <div id="x-axis-field">
+            <label id="x-label" for="x-axis">Select X-Axis Column:</label>
+            <select id="x-axis" name="x-axis">
+                <option value="" selected>Select Column</option>
+                {% for column in columns %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div id="y-axis-field">
+            <label id="y-label" for="y-axis">Select Y-Axis Column:</label>
+            <select id="y-axis" name="y-axis">
+                <option value="" selected>Select Column</option>
+                {% for column in columns %}
+                    <option value="{{ column }}">{{ column }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="center-button">
+            <button type="submit" id="submit-button" disabled>Generate Visualization</button>
+        </div>
+    </form>
+
+    <div id="output-container" style="display: block; {% if not processed_output %}display: none;{% endif %}">
+        <h2>Output</h2>
+        <div id="output">
+            {% if processed_output %}
+                {{ processed_output | safe }}
+            {% else %}
+                <p>No visualization to display. Please check your inputs.</p>
+            {% endif %}
+        </div>
+        <div class="center-button">
+            <button id="download-button" onclick="downloadOutput()">Download</button>
+        </div>
+    </div>    
+
+    <button id="back-button" onclick="goBack()">Back</button>
+
+    <script>
+        function updateFormFields() {
+            var visualizationType = document.getElementById('visualizations').value;
+            var xAxisField = document.getElementById('x-axis-field');
+            var yAxisField = document.getElementById('y-axis-field');
+            var xLabel = document.getElementById('x-label');
+            var yLabel = document.getElementById('y-label');
+            var submitButton = document.getElementById('submit-button');
+
+            xAxisField.style.display = 'none';
+            yAxisField.style.display = 'none';
+
+            if (visualizationType === 'bar_chart' || visualizationType === 'column_chart' || visualizationType === 'line_chart' || visualizationType === 'scatter_plot' || visualizationType === 'bubble_chart' || visualizationType === 'box_plot' || visualizationType === 'area_chart') {
+                xAxisField.style.display = 'block';
+                yAxisField.style.display = 'block';
+                xLabel.innerText = 'Select X-Axis Column:';
+                yLabel.innerText = 'Select Y-Axis Column:';
+            } else if (visualizationType === 'pie_chart' || visualizationType === 'radar_chart' || visualizationType === 'donut_chart' || visualizationType === 'histogram') {
+                xAxisField.style.display = 'block';
+                xLabel.innerText = 'Select Column:';
+            } else if (visualizationType === 'heatmap' || visualizationType === 'matrix') {
+                xAxisField.style.display = 'block';
+                yAxisField.style.display = 'block';
+                xLabel.innerText = 'Select X-Axis Column:';
+                yLabel.innerText = 'Select Y-Axis Column:';
+            } else if (visualizationType === 'slicer') {
+                xAxisField.style.display = 'block';
+                xLabel.innerText = 'Select Column:';
+            }
+
+            validateForm();
+        }
+
+        function validateForm() {
+            var visualizationType = document.getElementById('visualizations').value;
+            var xAxis = document.getElementById('x-axis').value;
+            var yAxis = document.getElementById('y-axis').value;
+            var submitButton = document.getElementById('submit-button');
+
+            if (visualizationType === 'bar_chart' || visualizationType === 'column_chart' || visualizationType === 'line_chart' || visualizationType === 'scatter_plot' || visualizationType === 'bubble_chart' || visualizationType === 'box_plot') {
+                submitButton.disabled = !(xAxis && yAxis);
+            } else if (visualizationType === 'pie_chart' || visualizationType === 'radar_chart' || visualizationType === 'donut_chart' || visualizationType === 'histogram') {
+                submitButton.disabled = !xAxis;
+            } else {
+                submitButton.disabled = false;
+            }
+        }
+
+        document.getElementById('visualizations').addEventListener('change', updateFormFields);
+        document.getElementById('x-axis').addEventListener('change', validateForm);
+        document.getElementById('y-axis').addEventListener('change', validateForm);
+
+        function downloadOutput() {
+            var outputElement = document.getElementById('output');
+            html2canvas(outputElement, {
+                onrendered: function(canvas) {
+                    var dataUrl = canvas.toDataURL('image/png');
+                    var link = document.createElement('a');
+                    link.href = dataUrl;
+                    link.download = 'visualization.png';
+                    link.click();
+                }
+            });
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+    </script>
+</body>
+</html>
